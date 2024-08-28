@@ -117,21 +117,19 @@ def main():
                     optimize_dis.zero_grad()
                     optimize_dis.step()
 
-            print('{:g}: Loss = {:.4f}'.format(global_step, loss))
-            if global_step % 10 == 0:
-                writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
-                                                   'D_loss loss': D_loss.item()})
-
+            
             step_time = time.time() - step_start_time
             total_time_elapsed = time.time() - start_time
             steps_remaining = args.num_steps - global_step
             eta_seconds = (total_time_elapsed / global_step) * steps_remaining if global_step > 0 else 0
             eta = timedelta(seconds=int(eta_seconds))
             
+            if global_step % 10 == 0:
+                writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
+                                                   'D_loss loss': D_loss.item()})
             if global_step % 100 == 0 :
-                print(f"Step: {global_step}, Time per Step: {step_time:.2f} seconds, ETA: {eta}")
+                print(f"Step: {global_step}, Time per Step: {step_time:.2f} seconds, ETA: {eta}, Loss = {loss:.4f}")
             
-
             # Get checkpoints:
             if global_step % CHECKPOINT_MARK_1 == 0:
                 torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
