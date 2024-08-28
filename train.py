@@ -8,20 +8,17 @@ from easydict import EasyDict
 from PIL import Image, ImageOps
 from torch import optim
 import utils
-from dataset import StegaData
+from dataset import StegaData 
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import lpips
+import time
+from datetime import datetime, timedelta
 
 CHECKPOINT_MARK_1 = 10_000
 CHECKPOINT_MARK_2 = 1500
 IMAGE_SIZE = 400
-
-print("\n\n---------------------->")
-print("Hiding Messages in Images")
-print("By Dan Epshtein and Neta Becker")
-print("<----------------------\n\n")
 
 def infoMessage0(string):
     print(f'[-----]: {string}')
@@ -75,6 +72,8 @@ def main():
     total_steps = len(dataset) // args.batch_size + 1
     global_step = 0
 
+    start_time = time.time()
+
     while global_step < args.num_steps:
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
@@ -96,8 +95,8 @@ def main():
             if args.cuda:
                 Ms = Ms.cuda()
 
-            #loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
-            loss_scales = [l2_loss_scale, 0, secret_loss_scale, 0]
+            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
+            #loss_scales = [l2_loss_scale, 0, secret_loss_scale, 0]
             yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,
@@ -120,6 +119,16 @@ def main():
             if global_step % 10 == 0:
                 writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                    'D_loss loss': D_loss.item()})
+
+            step_time = time.time() - step_start_time
+            total_time_elapsed = time.time() - start_time
+            steps_remaining = args.num_steps - global_step
+            eta_seconds = (total_time_elapsed / global_step) * steps_remaining if global_step > 0 else 0
+            eta = timedelta(seconds=int(eta_seconds))
+            
+            if global_step % 100 == 0 :
+                print(f"Step: {global_step}, Time per Step: {step_time:.2f} seconds, ETA: {eta}")
+            
 
             # Get checkpoints:
             if global_step % CHECKPOINT_MARK_1 == 0:

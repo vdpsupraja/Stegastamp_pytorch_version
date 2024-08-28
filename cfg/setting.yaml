@@ -1,13 +1,11 @@
-
-#train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
-train_path: '<ENTER_PATH>/VOC2012/JPEGImages/' # Please enter the path to your local dataset
-logs_path: "./logs/debug/"
-checkpoints_path: './checkpoints/debug/'
-saved_models: './saved_models/debug/'
+train_path: '/kaggle/input/mirflickr-1m/' # Please enter the path to your local dataset
+logs_path: "./logs/"
+checkpoints_path: './checkpoints/'
+saved_models: './saved_models/'
 
 cuda: True
 
-exp_name: 2
+exp_name: Torch
 secret_size: 100
 num_steps: 140_000
 batch_size: 4
@@ -23,7 +21,7 @@ secret_loss_scale: 2.5
 secret_loss_ramp: 1
 G_loss_scale: 0.5
 G_loss_ramp: 15_000
-borders: 'no_edge'  # choices=['no_edge','black','random','randomrgb','image','white']
+borders: 'black'  # choices=['no_edge','black','random','randomrgb','image','white']
 
 # YUV scales
 y_scale: 1
@@ -56,4 +54,4 @@ no_im_loss_steps: 1500
 pretrained: None
 min_loss: 1_000 # set high value so it won't be saved.
 min_secret_loss: 1_000 # set high value so it won't be saved.
-seed: 0
+seed: 18

@@ -92,7 +92,7 @@ class StegaStampEncoder(nn.Module):
         secrect, image = inputs
         secrect = secrect - .5
         image = image - .5
-
+        # image is between [-0..5,0.5]
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
         secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
