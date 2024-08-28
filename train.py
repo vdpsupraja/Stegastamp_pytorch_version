@@ -76,6 +76,8 @@ def main():
 
     while global_step < args.num_steps:
         for _ in range(min(total_steps, args.num_steps - global_step)):
+            step_start_time = time.time()
+            
             image_input, secret_input = next(iter(dataloader))
             if args.cuda:
                 image_input = image_input.cuda()
