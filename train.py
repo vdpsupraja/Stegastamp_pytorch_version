@@ -97,8 +97,8 @@ def main():
             if args.cuda:
                 Ms = Ms.cuda()
 
-            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
-            #loss_scales = [l2_loss_scale, 0, secret_loss_scale, 0]
+            #loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
+            loss_scales = [l2_loss_scale, 0, secret_loss_scale, 0]
             yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,
