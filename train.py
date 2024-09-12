@@ -75,8 +75,8 @@ def main():
     start_time = time.time()
     
     def normalize_image(image):
-    min_val = image.min()
-    max_val = image.max()
+        min_val = image.min()
+        max_val = image.max()
     
     
     if max_val > 255 or min_val < 0:
