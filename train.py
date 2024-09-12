@@ -73,9 +73,18 @@ def main():
     global_step = 0
 
     start_time = time.time()
-
-    while global_step < args.num_steps:
-        for _ in range(min(total_steps, args.num_steps - global_step)):
+    
+    def normalize_image(image):
+    min_val = image.min()
+    max_val = image.max()
+    
+    
+    if max_val > 255 or min_val < 0:
+        image = (image - min_val) / (max_val - min_val) 
+        image = image * 255.0 
+    
+    return torch.clamp(image, 0, 255) 
+    for _ in range(min(total_steps, args.num_steps - global_step)):
             step_start_time = time.time()
             
             image_input, secret_input = next(iter(dataloader))
