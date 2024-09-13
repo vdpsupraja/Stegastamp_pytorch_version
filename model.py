@@ -250,8 +250,7 @@ class Discriminator(nn.Module):
         output = torch.mean(x)
         return output, x
 
-
-def transform_net(encoded_image, args, global_step):
+    def transform_net(encoded_image, args, global_step):
     sh = encoded_image.size()
     ramp_fn = lambda ramp: np.min([global_step / ramp, 1.])
 
@@ -293,6 +292,8 @@ def transform_net(encoded_image, args, global_step):
     # (contrast, jpeg, etc., as before)
 
     return encoded_image
+
+
 
 
 def get_secret_acc(secret_true, secret_pred):
