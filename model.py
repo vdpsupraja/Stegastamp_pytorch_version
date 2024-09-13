@@ -451,4 +451,3 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         writer.add_image('transformed/transformed_image', transformed_image[0], global_step)
         writer.add_image('transformed/test', test_transform[0], global_step)
     return loss, secret_loss, D_loss, bit_acc, str_acc
-
