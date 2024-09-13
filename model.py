@@ -12,8 +12,6 @@ import warnings
 warnings.filterwarnings('ignore')
 import unet_parts as UNet
 from torchvision import transforms
-from kornia.color import rgb_to_hsv, hsv_to_rgb
-
 
 
 class Dense(nn.Module):
@@ -250,50 +248,62 @@ class Discriminator(nn.Module):
         output = torch.mean(x)
         return output, x
 
-    def transform_net(encoded_image, args, global_step):
+
+def transform_net(encoded_image, args, global_step):
     sh = encoded_image.size()
     ramp_fn = lambda ramp: np.min([global_step / ramp, 1.])
 
-    # Convert encoded image from RGB to HSV/HSI
-    encoded_image_hsi = rgb_to_hsv(encoded_image)
-
-    # Separate H, S, I channels
-    h_channel, s_channel, i_channel = encoded_image_hsi[:, 0, :, :], encoded_image_hsi[:, 1, :, :], encoded_image_hsi[:, 2, :, :]
-
-    # Example modification: Adjust hue and saturation based on global step ramp
-    rnd_hue_shift = ramp_fn(args.rnd_hue_ramp) * args.rnd_hue
-    rnd_sat_adjust = ramp_fn(args.rnd_sat_ramp) * args.rnd_sat
-
-    # Adjust hue channel (rotate the hue value within its range)
-    h_channel = (h_channel + rnd_hue_shift) % 1.0  # Ensuring it wraps around correctly
-
-    # Adjust saturation
-    s_channel = torch.clamp(s_channel * rnd_sat_adjust, 0, 1)
-
-    # Adjust intensity/brightness
-    rnd_brightness = ramp_fn(args.rnd_bri_ramp) * args.rnd_bri
-    i_channel = torch.clamp(i_channel + rnd_brightness, 0, 1)
-
-    # Combine adjusted H, S, I back into an HSI image
-    encoded_image_hsi = torch.stack([h_channel, s_channel, i_channel], dim=1)
-
-    # Convert adjusted HSI back to RGB
-    encoded_image = hsv_to_rgb(encoded_image_hsi)
-
-    # Continue with noise addition and contrast scaling as in original code
+    rnd_bri = ramp_fn(args.rnd_bri_ramp) * args.rnd_bri
+    rnd_hue = ramp_fn(args.rnd_hue_ramp) * args.rnd_hue
+    rnd_brightness = utils.get_rnd_brightness_torch(rnd_bri, rnd_hue, args.batch_size)  # [batch_size, 3, 1, 1]
+    jpeg_quality = 100. - torch.rand(1)[0] * ramp_fn(args.jpeg_quality_ramp) * (100. - args.jpeg_quality)
     rnd_noise = torch.rand(1)[0] * ramp_fn(args.rnd_noise_ramp) * args.rnd_noise
+
+    contrast_low = 1. - (1. - args.contrast_low) * ramp_fn(args.contrast_ramp)
+    contrast_high = 1. + (args.contrast_high - 1.) * ramp_fn(args.contrast_ramp)
+    contrast_params = [contrast_low, contrast_high]
+
+    rnd_sat = torch.rand(1)[0] * ramp_fn(args.rnd_sat_ramp) * args.rnd_sat
+
+    # blur
+    N_blur = 7
+    f = utils.random_blur_kernel(probs=[.25, .25], N_blur=N_blur, sigrange_gauss=[1., 3.], sigrange_line=[.25, 1.],
+                                 wmin_line=3)
+    if args.cuda:
+        f = f.cuda()
+    encoded_image = F.conv2d(encoded_image, f, bias=None, padding=int((N_blur - 1) / 2))
+
+    # noise
     noise = torch.normal(mean=0, std=rnd_noise, size=encoded_image.size(), dtype=torch.float32)
     if args.cuda:
         noise = noise.cuda()
     encoded_image = encoded_image + noise
     encoded_image = torch.clamp(encoded_image, 0, 1)
 
-    # Additional transformations, if required, can be applied here
-    # (contrast, jpeg, etc., as before)
+    # contrast & brightness
+    contrast_scale = torch.Tensor(encoded_image.size()[0]).uniform_(contrast_params[0], contrast_params[1])
+    contrast_scale = contrast_scale.reshape(encoded_image.size()[0], 1, 1, 1)
+    if args.cuda:
+        contrast_scale = contrast_scale.cuda()
+        rnd_brightness = rnd_brightness.cuda()
+    encoded_image = encoded_image * contrast_scale
+    encoded_image = encoded_image + rnd_brightness
+    encoded_image = torch.clamp(encoded_image, 0, 1)
+
+    # saturation
+    sat_weight = torch.FloatTensor([.3, .6, .1]).reshape(1, 3, 1, 1)
+    if args.cuda:
+        sat_weight = sat_weight.cuda()
+    encoded_image_lum = torch.mean(encoded_image * sat_weight, dim=1).unsqueeze_(1)
+    encoded_image = (1 - rnd_sat) * encoded_image + rnd_sat * encoded_image_lum
+
+    # jpeg
+    encoded_image = encoded_image.reshape([-1, 3, 400, 400])
+    if not args.no_jpeg:
+        encoded_image = utils.jpeg_compress_decompress(encoded_image, rounding=utils.round_only_at_0,
+                                                       quality=jpeg_quality)
 
     return encoded_image
-
-
 
 
 def get_secret_acc(secret_true, secret_pred):
