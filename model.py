@@ -251,47 +251,37 @@ class Discriminator(nn.Module):
         return output, x
 
     def transform_net(encoded_image, args, global_step):
-    sh = encoded_image.size()
-    ramp_fn = lambda ramp: np.min([global_step / ramp, 1.])
-
-    # Convert encoded image from RGB to HSV/HSI
-    encoded_image_hsi = rgb_to_hsv(encoded_image)
-
-    # Separate H, S, I channels
-    h_channel, s_channel, i_channel = encoded_image_hsi[:, 0, :, :], encoded_image_hsi[:, 1, :, :], encoded_image_hsi[:, 2, :, :]
-
-    # Example modification: Adjust hue and saturation based on global step ramp
-    rnd_hue_shift = ramp_fn(args.rnd_hue_ramp) * args.rnd_hue
-    rnd_sat_adjust = ramp_fn(args.rnd_sat_ramp) * args.rnd_sat
+        sh = encoded_image.size()
+        ramp_fn = lambda ramp: np.min([global_step / ramp, 1.])
+        encoded_image_hsi = rgb_to_hsv(encoded_image)
+        h_channel, s_channel, i_channel = encoded_image_hsi[:, 0, :, :], encoded_image_hsi[:, 1, :, :], encoded_image_hsi[:, 2, :, :]
+        rnd_hue_shift = ramp_fn(args.rnd_hue_ramp) * args.rnd_hue
+        rnd_sat_adjust = ramp_fn(args.rnd_sat_ramp) * args.rnd_sat
 
     # Adjust hue channel (rotate the hue value within its range)
-    h_channel = (h_channel + rnd_hue_shift) % 1.0  # Ensuring it wraps around correctly
+        h_channel = (h_channel + rnd_hue_shift) % 1.0  # Ensuring it wraps around correctly
 
     # Adjust saturation
-    s_channel = torch.clamp(s_channel * rnd_sat_adjust, 0, 1)
+        s_channel = torch.clamp(s_channel * rnd_sat_adjust, 0, 1)
 
     # Adjust intensity/brightness
-    rnd_brightness = ramp_fn(args.rnd_bri_ramp) * args.rnd_bri
-    i_channel = torch.clamp(i_channel + rnd_brightness, 0, 1)
+        rnd_brightness = ramp_fn(args.rnd_bri_ramp) * args.rnd_bri
+        i_channel = torch.clamp(i_channel + rnd_brightness, 0, 1)
 
     # Combine adjusted H, S, I back into an HSI image
-    encoded_image_hsi = torch.stack([h_channel, s_channel, i_channel], dim=1)
+        encoded_image_hsi = torch.stack([h_channel, s_channel, i_channel], dim=1)
 
     # Convert adjusted HSI back to RGB
-    encoded_image = hsv_to_rgb(encoded_image_hsi)
+        encoded_image = hsv_to_rgb(encoded_image_hsi)
 
     # Continue with noise addition and contrast scaling as in original code
-    rnd_noise = torch.rand(1)[0] * ramp_fn(args.rnd_noise_ramp) * args.rnd_noise
-    noise = torch.normal(mean=0, std=rnd_noise, size=encoded_image.size(), dtype=torch.float32)
-    if args.cuda:
-        noise = noise.cuda()
-    encoded_image = encoded_image + noise
-    encoded_image = torch.clamp(encoded_image, 0, 1)
-
-    # Additional transformations, if required, can be applied here
-    # (contrast, jpeg, etc., as before)
-
-    return encoded_image
+        rnd_noise = torch.rand(1)[0] * ramp_fn(args.rnd_noise_ramp) * args.rnd_noise
+        noise = torch.normal(mean=0, std=rnd_noise, size=encoded_image.size(), dtype=torch.float32)
+        if args.cuda:
+            noise = noise.cuda()
+            encoded_image = encoded_image + noise
+            encoded_image = torch.clamp(encoded_image, 0, 1)
+        return encoded_image
 
 
 
