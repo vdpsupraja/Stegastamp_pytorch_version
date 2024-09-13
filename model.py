@@ -283,9 +283,6 @@ class Discriminator(nn.Module):
             encoded_image = torch.clamp(encoded_image, 0, 1)
         return encoded_image
 
-
-
-
 def get_secret_acc(secret_true, secret_pred):
     if 'cuda' in str(secret_pred.device):
         secret_pred = secret_pred.cpu()
