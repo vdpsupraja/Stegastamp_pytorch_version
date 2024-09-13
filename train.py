@@ -10,13 +10,6 @@ import torch
 import lpips
 import time
 from datetime import datetime, timedelta
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-
-from fastkanconv import FastKANConvLayer  # Import the Kan-based convolutional network
-from kan_unet import KANU_Net  # Import the Kan-based U-Net model
-from dataset import StegaData  # Assuming the dataset remains unchanged
-import utils
 
 # Constants
 CHECKPOINT_MARK_1 = 10_000
